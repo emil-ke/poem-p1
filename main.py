@@ -1,3 +1,4 @@
+import sys
 import json
 import random
 import re
@@ -134,8 +135,10 @@ def generate_line_with_keyword(keyword):
 
 
 def main():
-    keywords_input = input("Enter keywords (comma-separated): ")
-    keywords = [kw.strip() for kw in keywords_input.split(",") if kw.strip()]
+    keywords = sys.argv[1:]
+    if not keywords:
+        print("No keywords provided! Using default instead.")
+        keywords = ["star", "rueful", "charcoal", "night", "rust", "bell", "ring", "field", "kingdom", "trash"]
     random.shuffle(keywords)
 
     print("\n")
