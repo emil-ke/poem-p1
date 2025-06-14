@@ -61,25 +61,26 @@ def clean_suffix_overflow(line):
     # This is a bit janky, which is fine for now
 
     # Fix triple or more 's' at word ends (e.g., "kisss" → "kiss")
-    line = re.sub(r'\b(\w*?)s{3,}\b', r'\1ss', line)
+    line = re.sub(r"\b(\w*?)s{3,}\b", r"\1ss", line)
 
-    # Fix past tense double "eded" (like "walkeded")
-    line = re.sub(r'(\w+)eded\b', r'\1ed', line)
-    
-    # (e.g. "douseed" -> "doused")
-    line = re.sub(r'(\w+)eed\b', r'\1ed', line)
+    # Fix past tense double "eded" (like "walkeded"; however, "ceded," for instance, becomes "ced")
+    line = re.sub(r"(\w+)eded\b", r"\1ed", line)
+
+    # (e.g. "douseed" -> "doused," also not infallible, e.g. "indeed" -> "inded")
+    line = re.sub(r"(\w+)eed\b", r"\1ed", line)
 
     # (e.g. "supplys" -> "supplies")
-    line = re.sub(r'(\w+)lys\b', r'\1lies', line)
+    line = re.sub(r"(\w+)lys\b", r"\1lies", line)
 
     # (e.g., "crucifys" -> "crucifies")
-    line = re.sub(r'(\w+)fys\b', r'\1fies', line)
+    line = re.sub(r"(\w+)fys\b", r"\1fies", line)
 
     return line
 
+
 def fix_articles(line):
     # Replace "a [vowel]" with "an [vowel]"
-    return re.sub(r'\ba ([aeiouAEIOU])', r'an \1', line)
+    return re.sub(r"\ba ([aeiouAEIOU])", r"an \1", line)
 
 
 def generate_line_with_keyword(keyword):
@@ -104,8 +105,8 @@ def generate_line_with_keyword(keyword):
     placeholders = {
         "noun": len(re.findall(r"{noun}", template)),
         "verb": len(re.findall(r"{verb}", template)),
-        "adj":  len(re.findall(r"{adj}", template)),
-        "adv":  len(re.findall(r"{adv}", template)),
+        "adj": len(re.findall(r"{adj}", template)),
+        "adv": len(re.findall(r"{adv}", template)),
     }
 
     keyword_letter = keyword[0]
@@ -130,6 +131,7 @@ def generate_line_with_keyword(keyword):
     res = clean_suffix_overflow(template)
     res = fix_articles(template)
     return res
+
 
 def main():
     keywords_input = input("Enter keywords (comma-separated): ")
