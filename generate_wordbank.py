@@ -1,23 +1,34 @@
 import json
 import nltk
-from nltk.corpus import brown, words as nltk_words, wordnet
+from nltk.corpus import gutenberg, words as nltk_words, wordnet
 from nltk import pos_tag
 from nltk.stem import WordNetLemmatizer
+from collections import Counter
 
-nltk.download("brown")
+nltk.download("gutenberg")
 nltk.download("punkt")
-nltk.download("averaged_perceptron_tagger_eng")
+nltk.download("averaged_perceptron_tagger")
 nltk.download("wordnet")
 nltk.download("omw-1.4")
 nltk.download("words")
 
-english_words = set(w.lower() for w in nltk_words.words())
 lemmatizer = WordNetLemmatizer()
-words = brown.words()
+english_words = set(w.lower() for w in nltk_words.words())
+
+words = [w.lower() for w in gutenberg.words() if w.isalpha() and len(w) > 2]
+word_freq = Counter(words)
 tagged = pos_tag(words)
 
 nouns, verbs, adjs, advs = set(), set(), set(), set()
 
+# === MANUAL BLACKLIST ===
+boring_words = {
+    "thing", "stuff", "nice", "fun", "big", "small", "bad", "good", "get", "got",
+    "make", "made", "go", "went", "say", "said", "see", "seen", "guy", "girl", "boy",
+    "come", "came", "people", "really", "very", "okay"
+}
+
+# === POS MAPPER ===
 def get_wordnet_pos(tag):
     if tag.startswith("J"):
         return wordnet.ADJ
@@ -29,9 +40,9 @@ def get_wordnet_pos(tag):
         return wordnet.ADV
     return None
 
+# === PROCESS LOOP ===
 for word, tag in tagged:
-    word = word.lower()
-    if len(word) < 3 or not word.isalpha():
+    if word in boring_words:
         continue
     if tag in ["NNP", "NNPS"]:  # Skip proper nouns
         continue
@@ -41,9 +52,16 @@ for word, tag in tagged:
         continue
 
     lemma = lemmatizer.lemmatize(word, pos)
+
     if lemma not in english_words:
         continue
 
+    # exclude overly common or overly rare words
+    freq = word_freq[lemma]
+    if freq < 2 or freq > 400:
+        continue
+
+    # Assign to POS buckets
     if pos == wordnet.NOUN:
         nouns.add(lemma)
     elif pos == wordnet.VERB:
