@@ -1,11 +1,10 @@
-import sys
+import argparse
 import json
 import random
 import re
 
 # === CONFIG ===
 VOWEL_BIAS_CHANCE = 0.8
-
 
 with open("wordbank.json") as f:
     wordbank = json.load(f)
@@ -59,33 +58,25 @@ def biased_vowel_choice(bank, keyword_vowel=None, vowel_chance=VOWEL_BIAS_CHANCE
 
 
 def clean_suffix_overflow(line):
-    # This is a bit janky, which is fine for now
-
+    # This is a bit janky, which is fine for now.
     # Fix triple or more 's' at word ends (e.g., "kisss" → "kiss")
     line = re.sub(r"\b(\w*?)s{3,}\b", r"\1ss", line)
-
     # Fix past tense double "eded" (like "walkeded"; however, "ceded," for instance, becomes "ced")
     line = re.sub(r"(\w+)eded\b", r"\1ed", line)
-
     # (e.g. "douseed" -> "doused," also not infallible, e.g. "indeed" -> "inded")
     line = re.sub(r"(\w+)eed\b", r"\1ed", line)
-
     # (e.g. "supplys" -> "supplies")
     line = re.sub(r"(\w+)lys\b", r"\1lies", line)
-
     # (e.g., "crucifys" -> "crucifies")
     line = re.sub(r"(\w+)fys\b", r"\1fies", line)
-
     return line
 
 
 def fix_articles(line):
-    # Replace "a [vowel]" with "an [vowel]"
     return re.sub(r"\ba ([aeiouAEIOU])", r"an \1", line)
 
 
 def generate_line_with_keyword(keyword):
-    # Determine POS for the keyword
     pos = "noun"
     if keyword.endswith("ly"):
         pos = "adv"
@@ -93,10 +84,7 @@ def generate_line_with_keyword(keyword):
         pos = "adj"
     elif keyword in verbs or keyword.endswith("ing"):
         pos = "verb"
-    else:
-        pos = "noun"
 
-    # Filter templates that contain at least one matching placeholder
     matching_templates = [t for t in templates if f"{{{pos}}}" in t]
     if not matching_templates:
         return f"[no template for {keyword}]"
@@ -110,18 +98,14 @@ def generate_line_with_keyword(keyword):
         "adv": len(re.findall(r"{adv}", template)),
     }
 
-    keyword_letter = keyword[0]
     keyword_vowel = get_first_vowel(keyword)
-
     fill = {}
     for tag in placeholders:
         bank = wordbank[tag + "s"]
         fill[tag] = [
-            biased_vowel_choice(bank, keyword_vowel, VOWEL_BIAS_CHANCE)
-            for _ in range(placeholders[tag])
+            biased_vowel_choice(bank, keyword_vowel) for _ in range(placeholders[tag])
         ]
 
-    # Guaranteed insertion
     i = random.randint(0, placeholders[pos] - 1)
     fill[pos][i] = keyword
 
@@ -129,24 +113,47 @@ def generate_line_with_keyword(keyword):
         for rep in fill[tag]:
             template = template.replace("{" + tag + "}", rep, 1)
 
-    res = clean_suffix_overflow(template)
-    res = fix_articles(template)
-    return res
+    line = clean_suffix_overflow(template)
+    return fix_articles(line)
+
+
+def generate_poem(keywords, repeats=1):
+    lines = []
+    for _ in range(repeats):
+        random.shuffle(keywords)
+        for i, kw in enumerate(keywords):
+            lines.append(generate_line_with_keyword(kw))
+            if (i + 1) % 4 == 0:
+                lines.append("")
+    return lines
 
 
 def main():
-    keywords = sys.argv[1:]
-    if not keywords:
-        print("No keywords provided! Using default instead.")
-        keywords = ["star", "rueful", "charcoal", "night", "rust", "bell", "ring", "field", "kingdom", "trash"]
-    random.shuffle(keywords)
+    parser = argparse.ArgumentParser(description="Poem Generator")
+    parser.add_argument("keywords", nargs="*", help="Keywords to base poem on")
+    parser.add_argument("--seed", type=int, help="Random seed for reproducibility")
+    parser.add_argument("--repeat", type=int, default=1, help="Repetition cycles (keyword reuse)")
+    parser.add_argument("--out", type=str, help="Output file")
 
-    print("\n")
-    for i, kw in enumerate(keywords):
-        print(generate_line_with_keyword(kw))
-        if (i + 1) % 4 == 0:
-            print()
+    args = parser.parse_args()
 
+    if args.seed is not None:
+        random.seed(args.seed)
+
+    if args.keywords:
+        keywords = args.keywords
+    else:
+        print("=== No keywords provided! Using default instead ===\n\n")
+        keywords = ["stars", "rueful", "charcoal", "night", "rust", "bells", "ring", "fields", "kingdom", "trash"]
+
+    poem = generate_poem(keywords, repeats=args.repeat)
+
+    if args.out:
+        with open(args.out, "w") as f:
+            f.write("\n".join(poem))
+        print(f"Poem written to {args.out}")
+    else:
+        print("\n".join(poem))
 
 if __name__ == "__main__":
     main()
