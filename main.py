@@ -69,6 +69,8 @@ def clean_suffix_overflow(line):
     line = re.sub(r"(\w+)lys\b", r"\1lies", line)
     # (e.g., "crucifys" -> "crucifies")
     line = re.sub(r"(\w+)fys\b", r"\1fies", line)
+    # (e.g., "humanity" -> "humanties")
+    line = re.sub(r"(\w+)tys\b", r"\1ties", line)
     return line
 
 
@@ -144,7 +146,7 @@ def main():
         keywords = args.keywords
     else:
         print("=== No keywords provided! Using default instead ===\n\n")
-        keywords = ["stars", "rueful", "charcoal", "night", "rust", "bells", "ring", "fields", "kingdom", "trash"]
+        keywords = ["star", "sorrowful", "bell", "field", "kingdom"]
 
     poem = generate_poem(keywords, repeats=args.repeat)
 
